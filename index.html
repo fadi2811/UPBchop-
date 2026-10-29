@@ -135,8 +135,10 @@ summary{cursor:pointer;font-weight:600;margin-bottom:8px}
 // À modifier : ton numéro WhatsApp au format international, sans + (ex. 221771234567)
 var WA = "2250575028417";
 // À modifier : le lien final de ton site, utilisé par le bouton Partager
-var SITE = "https://claude.ai/artifact/S2thR9pjSSQrgiGoYEGtNC";
+var SITE = "https://fadi2811.github.io/UPBchop-/";
 var FEE = 100;
+// Adresse du stock en direct (Google Apps Script). Laisse vide pour garder le stock écrit dans le fichier.
+var STOCK_URL = "https://script.google.com/macros/s/AKfycbxrVnJxud2inVGScyjxx62wTCWR8gRercJ4ymEw1vm27Jdy5RAITPDsCtudzUOWEMGNaw/exec";
 // n = nom, p = prix, e = icône, c = couleur, cat = catégorie, s = tailles (ou null), st = stock
 var P = [
   {n:"T-shirt oversize",p:5000,e:"👕",c:"--t1",cat:"Vêtements",s:["S","M","L","XL"],st:12},
@@ -231,6 +233,30 @@ function dishes(){
   $("#lt").textContent=f(dTot()?dTot()+FEE:0);
 }
 function dchg(i,d){var n=(dq[i]||0)+d;if(n<0||n>D[i].st)return;if(n===0)delete dq[i];else dq[i]=n;dishes()}
+var busy=false;
+function applyStock(s){
+  if(!s)return;
+  P.forEach(function(x,i){if(s["p"+i]!==undefined)x.st=Number(s["p"+i])});
+  D.forEach(function(x,i){if(s["d"+i]!==undefined)x.st=Number(s["d"+i])});
+  for(var i in dq){if(dq[i]>D[i].st){if(D[i].st>0)dq[i]=D[i].st;else delete dq[i]}}
+  for(var k in cart){if(qty(pid(k))>P[pid(k)].st)delete cart[k]}
+  grid();dishes();bar();sheet(false);
+}
+function loadStock(){
+  if(!STOCK_URL)return;
+  fetch(STOCK_URL+"?t="+Date.now()).then(function(r){return r.json()}).then(function(d){applyStock(d.stock)}).catch(function(){});
+}
+function reserve(items,code,err,ok){
+  if(!STOCK_URL){ok();return}
+  if(busy)return;
+  var need={};items.forEach(function(it){need[it.id]=(need[it.id]||0)+it.qty});
+  var arr=Object.keys(need).map(function(id){return {id:id,qty:need[id]}});
+  busy=true;$(err).textContent="Vérification du stock...";
+  fetch(STOCK_URL,{method:"POST",body:JSON.stringify({code:code,items:arr})})
+    .then(function(r){return r.json()})
+    .then(function(d){busy=false;if(d.ok){$(err).textContent="";ok();applyStock(d.stock)}else{applyStock(d.stock);$(err).textContent=d.error||"Commande impossible."}})
+    .catch(function(){busy=false;$(err).textContent="Connexion impossible. Réessaie dans un instant."});
+}
 function newCode(){function r(){return ("0"+Math.floor(Math.random()*100)).slice(-2)}return r()+"-"+r()}
 function wa(msg,code){
   $("#ow").href="https://wa.me/"+WA+"?text="+encodeURIComponent(msg);
@@ -256,7 +282,8 @@ function sendShop(){
     return "- "+cart[k]+" x "+x.n+(z?" taille "+z:"")+" ("+f(x.p*cart[k])+")";
   }).join("\n");
   var code=newCode();
-  wa("🛍️ Commande UPB chop, code "+code+"\n"+lines+"\nTotal : "+f(tot())+"\nNom : "+n+"\nLieu : "+l+"\nPaiement : "+$("#cw").value,code);
+  reserve(Object.keys(cart).map(function(k){return {id:"p"+pid(k),qty:cart[k]}}),code,"#e1",function(){
+  wa("🛍️ Commande UPB chop, code "+code+"\n"+lines+"\nTotal : "+f(tot())+"\nNom : "+n+"\nLieu : "+l+"\nPaiement : "+$("#cw").value,code)});
 }
 function sendLiv(){
   var p=$("#lp").value.trim(),l=$("#ll").value.trim();
@@ -264,12 +291,15 @@ function sendLiv(){
   var pl=Object.keys(dq).map(function(i){return "- "+dq[i]+" x "+D[i].n+" ("+f(D[i].p*dq[i])+")"}).join("\n");
   $("#e2").textContent="";
   var code=newCode();
-  wa("🍽️ Livraison de midi UPB chop, code "+code+"\nPlats :\n"+pl+(p?"\nPrécision : "+p:"")+"\nLieu : "+l+"\nHeure : "+$("#lh").value+"\nFrais de livraison : "+f(FEE)+"\nTotal : "+f(dTot()+FEE)+"\nPaiement : "+$("#lw").value,code);
+  reserve(Object.keys(dq).map(function(i){return {id:"d"+i,qty:dq[i]}}),code,"#e2",function(){
+  wa("🍽️ Livraison de midi UPB chop, code "+code+"\nPlats :\n"+pl+(p?"\nPrécision : "+p:"")+"\nLieu : "+l+"\nHeure : "+$("#lh").value+"\nFrais de livraison : "+f(FEE)+"\nTotal : "+f(dTot()+FEE)+"\nPaiement : "+$("#lw").value,code)});
 }
 $("#fee").textContent=f(FEE);
 dishes();
 chips();
 grid();
+loadStock();
+setInterval(loadStock,30000);
 </script>
 </body>
 </html>
