@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Grayali up – Admin</title>
+<style>
+:root{--bg:#fdf2e7;--card:#fff;--tx:#2a2a2a;--mu:#6d5f55;--ac:#d14b33;--hi:#e9a84b;--bd:#ecd9c4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,sans-serif;padding:14px 14px 80px}
+h1{margin:0 0 10px;font-size:24px}h2{font-size:18px;margin:22px 0 8px}
+input,button,select{font:inherit;padding:10px;border-radius:10px;border:1.5px solid var(--bd)}
+button{background:var(--ac);color:#fff;border:0;font-weight:700;cursor:pointer}
+button.g{background:#fff;color:var(--tx);border:1.5px solid var(--bd)}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:8px 0}
+.r{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.sp{justify-content:space-between}
+.b{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:var(--hi)}
+.b.p{background:#9fd8a8}.b.l{background:#b9c8f0}.b.a{background:#ccc}
+small,.m{color:var(--mu)}.tabs{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.tabs button{background:#fff;color:var(--tx);border:1.5px solid var(--bd)}.tabs button.on{background:var(--tx);color:#fff}
+#msg{color:var(--ac);font-weight:700;min-height:22px}
+.st input{width:70px}
+</style></head><body>
+<h1>Grayali up · Admin</h1>
+<div id="login" class="c"><p class="m">Mot de passe du tableau de bord :</p><div class="r"><input id="pw" type="password" placeholder="Mot de passe"><button onclick="enter()">Entrer</button></div></div>
+<div id="app" hidden>
+<div class="r sp"><button class="g" onclick="load()">Actualiser</button><button class="g" onclick="out()">Quitter</button></div>
+<p id="msg"></p>
+<div class="tabs" id="tabs"></div>
+<div id="v"></div>
+</div>
+<script>
+var URL_="https://script.google.com/macros/s/AKfycbxrVnJxud2inVGScyjxx62wTCWR8gRercJ4ymEw1vm27Jdy5RAITPDsCtudzUOWEMGNaw/exec",key="",D=null,tab="o",flt="Aujourd";
+function $(s){return document.querySelector(s)}
+function f(n){return (Number(n)||0).toLocaleString("fr-FR").replace(/[  ]/g," ")+" FCFA"}
+function api(o){o.key=key;return fetch(URL_,{method:"POST",body:JSON.stringify(o)}).then(function(r){return r.json()})}
+function enter(){key=$("#pw").value;try{sessionStorage.setItem("ak",key)}catch(e){}load(true)}
+function out(){key="";try{sessionStorage.removeItem("ak")}catch(e){}location.reload()}
+function load(first){
+  $("#msg").textContent="Chargement...";
+  api({action:"data"}).then(function(d){
+    if(!d.ok){$("#msg").textContent=d.error||"Erreur";if(!first){out()}else alert(d.error||"Erreur");return}
+    D=d;$("#login").hidden=true;$("#app").hidden=false;$("#msg").textContent="";draw();
+  }).catch(function(){$("#msg").textContent="Connexion impossible."});
+}
+function setTab(t){tab=t;draw()}
+function draw(){
+  var rw=D.rewards.length;
+  $("#tabs").innerHTML=[["o","Commandes"],["s","Stock"],["p","Points"],["r","Cadeaux"+(rw?" ("+rw+")":"")]].map(function(x){return '<button class="'+(tab===x[0]?"on":"")+'" onclick="setTab(\''+x[0]+'\')">'+x[1]+'</button>'}).join("");
+  var h="";
+  if(tab==="o"){
+    var open=D.orders.filter(function(o){return o.statut==="En attente"||o.statut==="Payé"});
+    var sum=D.orders.filter(function(o){return o.statut==="Payé"||o.statut==="Livré"}).reduce(function(a,o){return a+Number(o.total||0)},0);
+    h+='<p class="m">'+open.length+' à traiter · payé et livré dans la liste : <b>'+f(sum)+'</b></p>';
+    h+=D.orders.map(function(o){
+      var c=o.statut==="Payé"?"p":o.statut==="Livré"?"l":o.statut==="Annulé"?"a":"";
+      var btn=function(s,l){return o.statut===s?"":'<button class="'+(s==="Annulé"?"g":"")+'" onclick="setSt('+o.row+',\''+s+'\')">'+l+'</button>'};
+      return '<div class="c"><div class="r sp"><b>Code '+o.code+'</b><span class="b '+c+'">'+o.statut+'</span></div><div>'+o.resume+'</div><small>'+o.jour+' · '+(o.lieu||"")+'<br>'+(o.tel?'<a href="https://wa.me/225'+o.tel.replace(/^0/,"0")+'" target="_blank">'+o.tel+'</a> · ':"")+f(o.total)+(o.nom?" · "+o.nom:"")+'</small><div class="r" style="margin-top:8px">'+btn("Payé","Payé reçu")+btn("Livré","Livré")+btn("Annulé","Annuler")+'</div></div>';
+    }).join("")||'<p class="m">Aucune commande.</p>';
+  }
+  if(tab==="s"){
+    h+='<p class="m">Change un nombre puis touche OK. « demain » = prochain jour de livraison.</p>';
+    var pjv=0;D.stock.forEach(function(s){if(s.id==="pj")pjv=s.stock});
+    h+='<div class="c"><b>Plat du jour</b><p class="m">Il apparaît en haut du site.</p><div class="r"><select id="pjs"><option value="0">Aucun</option>'+D.stock.filter(function(s){return /^t\d+$/.test(s.id)}).map(function(s){var n=Number(s.id.slice(1))+1;return '<option value="'+n+'"'+(pjv===n?" selected":"")+'>'+s.nom.replace(/ \(demain\)$/,"")+'</option>'}).join("")+'</select><button onclick="setPj()">OK</button></div></div>';
+    h+=D.stock.filter(function(s){return s.id!=="pj"}).map(function(s){return '<div class="c r sp st"><span>'+s.nom+'</span><span class="r"><input type="number" min="0" id="s_'+s.id+'" value="'+s.stock+'"><button onclick="setStock(\''+s.id+'\')">OK</button></span></div>'}).join("");
+    h+='<div class="c"><b>Nouvelle journée</b><p class="m">Remet tous les plats (aujourd’hui et demain) à ce nombre :</p><div class="r"><input type="number" id="rv" value="15" style="width:80px"><button onclick="resetAll()">Remettre</button></div></div>';
+  }
+  if(tab==="p"){
+    h+='<p class="m">Objectif : '+D.goal+' points. Les points arrivent quand tu touches « Payé reçu ».</p>';
+    h+=D.points.map(function(p){return '<div class="c r sp"><span>'+p.tel+'</span><b>'+p.points+' / '+D.goal+'</b></div>'}).join("")||'<p class="m">Pas encore de points.</p>';
+  }
+  if(tab==="r"){
+    h+=D.rewards.map(function(r){return '<div class="c r sp"><span><b>'+r.cadeau+'</b><br><small>'+r.tel+'</small></span><button onclick="remis('+r.row+')">Remis</button></div>'}).join("")||'<p class="m">Aucun cadeau à remettre.</p>';
+  }
+  $("#v").innerHTML=h;
+}
+function setSt(row,s){api({action:"statut",row:row,statut:s}).then(function(d){if(d.msg)alert("Cadeau tiré : "+d.msg);load()})}
+function setStock(id){api({action:"stock",id:id,value:$("#s_"+id).value}).then(function(){$("#msg").textContent="Enregistré.";load()})}
+function resetAll(){if(!confirm("Remettre tous les plats à "+$("#rv").value+" ?"))return;api({action:"reset",value:$("#rv").value}).then(function(){load()})}
+function setPj(){api({action:"stock",id:"pj",value:$("#pjs").value}).then(function(){$("#msg").textContent="Plat du jour enregistré.";load()})}
+function remis(row){api({action:"remis",row:row}).then(function(){load()})}
+try{var k=sessionStorage.getItem("ak");if(k){key=k;load()}}catch(e){}
+</script></body></html>
