@@ -28,6 +28,11 @@ small,.m{color:var(--mu)}.tabs{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap
 <script>
 var URL_="https://script.google.com/macros/s/AKfycbxrVnJxud2inVGScyjxx62wTCWR8gRercJ4ymEw1vm27Jdy5RAITPDsCtudzUOWEMGNaw/exec",key="",D=null,tab="o",flt="Aujourd";
 function $(s){return document.querySelector(s)}
+// Échappe tout texte venu des clients avant de l'afficher (empêche l'injection de code)
+function e(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+// Lien WhatsApp : garde uniquement les chiffres et ajoute 225 si besoin
+function wl(t){var d=String(t||"").replace(/\D/g,"");if(d.indexOf("00225")===0)d=d.slice(5);if(!(d.length>10&&d.indexOf("225")===0))d="225"+d;return "https://wa.me/"+d}
+function n(x){return Number(x)||0}
 function f(n){return (Number(n)||0).toLocaleString("fr-FR").replace(/[  ]/g," ")+" FCFA"}
 function api(o){o.key=key;return fetch(URL_,{method:"POST",body:JSON.stringify(o)}).then(function(r){return r.json()})}
 function enter(){key=$("#pw").value;try{sessionStorage.setItem("ak",key)}catch(e){}load(true)}
@@ -50,27 +55,27 @@ function draw(){
     h+='<p class="m">'+open.length+' à traiter · payé et livré dans la liste : <b>'+f(sum)+'</b></p>';
     h+=D.orders.map(function(o){
       var c=o.statut==="Payé"?"p":o.statut==="Livré"?"l":o.statut==="Annulé"?"a":"";
-      var btn=function(s,l){return o.statut===s?"":'<button class="'+(s==="Annulé"?"g":"")+'" onclick="setSt('+o.row+',\''+s+'\')">'+l+'</button>'};
-      return '<div class="c"><div class="r sp"><b>Code '+o.code+'</b><span class="b '+c+'">'+o.statut+'</span></div><div>'+o.resume+'</div><small>'+o.jour+' · '+(o.lieu||"")+'<br>'+(o.tel?'<a href="https://wa.me/225'+o.tel.replace(/^0/,"0")+'" target="_blank">'+o.tel+'</a> · ':"")+f(o.total)+(o.nom?" · "+o.nom:"")+'</small><div class="r" style="margin-top:8px">'+btn("Payé","Payé reçu")+btn("Livré","Livré")+btn("Annulé","Annuler")+'</div></div>';
+      var btn=function(s,l){return o.statut===s?"":'<button class="'+(s==="Annulé"?"g":"")+'" onclick="setSt('+n(o.row)+',\''+s+'\')">'+l+'</button>'};
+      return '<div class="c"><div class="r sp"><b>Code '+e(o.code)+'</b><span class="b '+c+'">'+e(o.statut)+'</span></div><div style="white-space:pre-line">'+e(o.resume)+'</div><small>'+e(o.jour)+' · '+e(o.lieu)+'<br>'+(o.tel?'<a href="'+wl(o.tel)+'" target="_blank" rel="noopener">'+e(o.tel)+'</a> · ':"")+f(o.total)+(o.nom?" · "+e(o.nom):"")+'</small><div class="r" style="margin-top:8px">'+btn("Payé","Payé reçu")+btn("Livré","Livré")+btn("Annulé","Annuler")+'</div></div>';
     }).join("")||'<p class="m">Aucune commande.</p>';
   }
   if(tab==="s"){
     h+='<p class="m">Change un nombre puis touche OK. « demain » = prochain jour de livraison.</p>';
     var pjv=0;D.stock.forEach(function(s){if(s.id==="pj")pjv=s.stock});
-    h+='<div class="c"><b>Plat du jour</b><p class="m">Il apparaît en haut du site.</p><div class="r"><select id="pjs"><option value="0">Aucun</option>'+D.stock.filter(function(s){return /^t\d+$/.test(s.id)}).map(function(s){var n=Number(s.id.slice(1))+1;return '<option value="'+n+'"'+(pjv===n?" selected":"")+'>'+s.nom.replace(/ \(demain\)$/,"")+'</option>'}).join("")+'</select><button onclick="setPj()">OK</button></div></div>';
-    h+=D.stock.filter(function(s){return s.id!=="pj"}).map(function(s){return '<div class="c r sp st"><span>'+s.nom+'</span><span class="r"><input type="number" min="0" id="s_'+s.id+'" value="'+s.stock+'"><button onclick="setStock(\''+s.id+'\')">OK</button></span></div>'}).join("");
+    h+='<div class="c"><b>Plat du jour</b><p class="m">Il apparaît en haut du site.</p><div class="r"><select id="pjs"><option value="0">Aucun</option>'+D.stock.filter(function(s){return /^t\d+$/.test(s.id)}).map(function(s){var n=Number(s.id.slice(1))+1;return '<option value="'+n+'"'+(pjv===n?" selected":"")+'>'+e(s.nom.replace(/ \(demain\)$/,""))+'</option>'}).join("")+'</select><button onclick="setPj()">OK</button></div></div>';
+    h+=D.stock.filter(function(s){return s.id!=="pj"}).map(function(s){return '<div class="c r sp st"><span>'+e(s.nom)+'</span><span class="r"><input type="number" min="0" id="s_'+e(s.id)+'" value="'+n(s.stock)+'"><button onclick="setStock(\''+e(s.id)+'\')">OK</button></span></div>'}).join("");
     h+='<div class="c"><b>Nouvelle journée</b><p class="m">Remet tous les plats (aujourd’hui et demain) à ce nombre :</p><div class="r"><input type="number" id="rv" value="15" style="width:80px"><button onclick="resetAll()">Remettre</button></div></div>';
   }
   if(tab==="p"){
-    h+='<p class="m">Objectif : '+D.goal+' points. Les points arrivent quand tu touches « Payé reçu ».</p>';
-    h+=D.points.map(function(p){return '<div class="c r sp"><span>'+p.tel+'</span><b>'+p.points+' / '+D.goal+'</b></div>'}).join("")||'<p class="m">Pas encore de points.</p>';
+    h+='<p class="m">Objectif : '+n(D.goal)+' points. Les points arrivent quand tu touches « Payé reçu ».</p>';
+    h+=D.points.map(function(p){return '<div class="c r sp"><span>'+e(p.tel)+'</span><b>'+n(p.points)+' / '+n(D.goal)+'</b></div>'}).join("")||'<p class="m">Pas encore de points.</p>';
   }
   if(tab==="r"){
-    h+=D.rewards.map(function(r){return '<div class="c r sp"><span><b>'+r.cadeau+'</b><br><small>'+r.tel+'</small></span><button onclick="remis('+r.row+')">Remis</button></div>'}).join("")||'<p class="m">Aucun cadeau à remettre.</p>';
+    h+=D.rewards.map(function(r){return '<div class="c r sp"><span><b>'+e(r.cadeau)+'</b><br><small>'+e(r.tel)+'</small></span><button onclick="remis('+n(r.row)+')">Remis</button></div>'}).join("")||'<p class="m">Aucun cadeau à remettre.</p>';
   }
   $("#v").innerHTML=h;
 }
-function setSt(row,s){api({action:"statut",row:row,statut:s}).then(function(d){if(d.msg)alert("Cadeau tiré : "+d.msg);load()})}
+function setSt(row,s){api({action:"statut",row:row,statut:s}).then(function(d){if(d.msg)alert("Cadeau tiré : "+String(d.msg));load()})}
 function setStock(id){api({action:"stock",id:id,value:$("#s_"+id).value}).then(function(){$("#msg").textContent="Enregistré.";load()})}
 function resetAll(){if(!confirm("Remettre tous les plats à "+$("#rv").value+" ?"))return;api({action:"reset",value:$("#rv").value}).then(function(){load()})}
 function setPj(){api({action:"stock",id:"pj",value:$("#pjs").value}).then(function(){$("#msg").textContent="Plat du jour enregistré.";load()})}
