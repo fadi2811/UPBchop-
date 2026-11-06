@@ -64,7 +64,7 @@ function draw(){
     var pjv=0;D.stock.forEach(function(s){if(s.id==="pj")pjv=s.stock});
     h+='<div class="c"><b>Plat du jour</b><p class="m">Il apparaît en haut du site.</p><div class="r"><select id="pjs"><option value="0">Aucun</option>'+D.stock.filter(function(s){return /^t\d+$/.test(s.id)}).map(function(s){var n=Number(s.id.slice(1))+1;return '<option value="'+n+'"'+(pjv===n?" selected":"")+'>'+e(s.nom.replace(/ \(demain\)$/,""))+'</option>'}).join("")+'</select><button onclick="setPj()">OK</button></div></div>';
     h+=D.stock.filter(function(s){return s.id!=="pj"}).map(function(s){return '<div class="c r sp st"><span>'+e(s.nom)+'</span><span class="r"><input type="number" min="0" id="s_'+e(s.id)+'" value="'+n(s.stock)+'"><button onclick="setStock(\''+e(s.id)+'\')">OK</button></span></div>'}).join("");
-    h+='<div class="c"><b>Nouvelle journée</b><p class="m">Remet tous les plats (aujourd’hui et demain) à ce nombre :</p><div class="r"><input type="number" id="rv" value="15" style="width:80px"><button onclick="resetAll()">Remettre</button></div></div>';
+    h+='<div class="c"><b>Corriger tout le stock</b><p class="m">Chaque matin d’école, le stock « demain » devient tout seul celui d’aujourd’hui. Ce bouton sert seulement en cas d’erreur : il remet tous les plats (aujourd’hui et demain) à ce nombre.</p><div class="r"><input type="number" id="rv" value="15" style="width:80px"><button onclick="resetAll()">Remettre</button></div></div>';
   }
   if(tab==="p"){
     h+='<p class="m">Objectif : '+n(D.goal)+' points. Les points arrivent quand tu touches « Payé reçu ».</p>';
@@ -75,7 +75,7 @@ function draw(){
   }
   $("#v").innerHTML=h;
 }
-function setSt(row,s){api({action:"statut",row:row,statut:s}).then(function(d){if(d.msg)alert("Cadeau tiré : "+String(d.msg));load()})}
+function setSt(row,s){api({action:"statut",row:row,statut:s}).then(function(d){if(!d.ok)alert(d.error||"Erreur");else if(d.msg)alert("Cadeau tiré : "+String(d.msg));load()}).catch(function(){$("#msg").textContent="Connexion impossible."})}
 function setStock(id){api({action:"stock",id:id,value:$("#s_"+id).value}).then(function(){$("#msg").textContent="Enregistré.";load()})}
 function resetAll(){if(!confirm("Remettre tous les plats à "+$("#rv").value+" ?"))return;api({action:"reset",value:$("#rv").value}).then(function(){load()})}
 function setPj(){api({action:"stock",id:"pj",value:$("#pjs").value}).then(function(){$("#msg").textContent="Plat du jour enregistré.";load()})}
