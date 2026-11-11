@@ -123,7 +123,7 @@ summary{cursor:pointer;font-weight:600;margin-bottom:8px}
 #om{margin:8px 0;font-size:14px;width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--bd);background:var(--soft,var(--bg));color:var(--tx);font-family:inherit}
 </style>
 </head>
-<body class="liv" data-th="rouge">
+<body class="liv" data-th="creme">
 <header>
   <h1>Grayali <span>up</span></h1>
   <p class="sub">Ton repas de midi, livré à ta salle.</p>
@@ -240,7 +240,9 @@ var STOCK_URL = "https://script.google.com/macros/s/AKfycbxrVnJxud2inVGScyjxx62w
 var SHOP_OPEN = false;
 var LIV_OPEN = true;
 // Sélecteur de couleurs pour choisir la version : mets false quand tu as choisi
-var THEME_PICKER = true;
+var THEME_PICKER = false;
+// Couleur du site quand le sélecteur est caché : "rouge", "orange", "creme" ou "noir"
+var THEME_DEFAULT = "creme";
 // Les commandes du jour ferment à cette heure (heure de Côte d’Ivoire), en minutes : 11h30 = 11*60+30
 var TODAY_END = 11*60+30;
 // Commandes pour le jour même : mets true pour remettre le bouton « Pour aujourd’hui »
@@ -328,7 +330,8 @@ function setTheme(t){
 function initTheme(){
   var t=location.hash.slice(1),ok=THEMES.map(function(x){return x[0]});
   if(ok.indexOf(t)<0){try{t=localStorage.getItem("upbTheme")}catch(e){t=null}}
-  if(ok.indexOf(t)<0)t="rouge";
+  if(!THEME_PICKER)t=THEME_DEFAULT;
+  if(ok.indexOf(t)<0)t=THEME_DEFAULT;
   document.body.setAttribute("data-th",t);drawThm();
 }
 /* ---------- Livraison de midi ---------- */
