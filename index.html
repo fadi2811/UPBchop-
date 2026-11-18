@@ -238,7 +238,7 @@ var SITE = "https://fadi2811.github.io/UPBchop-/";
 var STOCK_URL = "https://script.google.com/macros/s/AKfycbxrVnJxud2inVGScyjxx62wTCWR8gRercJ4ymEw1vm27Jdy5RAITPDsCtudzUOWEMGNaw/exec";
 // Boutique : mets true pour l’ouvrir. Livraison : mets false pour fermer.
 var SHOP_OPEN = false;
-var LIV_OPEN = true;
+var LIV_OPEN = false;
 // Sélecteur de couleurs pour choisir la version : mets false quand tu as choisi
 var THEME_PICKER = false;
 // Couleur du site quand le sélecteur est caché : "rouge", "orange", "creme" ou "noir"
@@ -356,7 +356,7 @@ function ltot(){var t=0;for(var k in lc)t+=D[k].p*lc[k];return t}
 function places(){
   var di=dayInfo(),h="";
   if(dayMode==="d"&&!di.todayOpen)dayMode="t";
-  var msg=LIV_OPEN?"":"Pas de livraison pour le moment. Reviens bientôt !";
+  var msg=LIV_OPEN?"":"La livraison est en pause pour le moment. Merci pour ta fidélité, on revient bientôt ! Tes points sont gardés.";
   $("#closed").hidden=!msg;$("#closed").textContent=msg;
   $("#pn").innerHTML=msg?"":(di.todayOpen
     ?'Commande pour <b>aujourd’hui</b> jusqu’à '+hm(TODAY_END)+', ou pour <b>'+di.next+'</b>. Livraison de 12h à 12h40. Touche un plat pour le commander.'
